@@ -109,7 +109,7 @@ const palette = {
 
 const dashboardData = {
   overview: {
-    title: 'NC DHHS Phase 0 Assessment Dashboard',
+    title: 'NC DHHS Phase Assessment Dashboard',
     subtitle:
       'Executive prototype for Initiative 6 rural provider readiness assessment, RHIF decision support, and Phase 0 governance framing.',
     summary: [
