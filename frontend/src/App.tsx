@@ -37,7 +37,7 @@ import {
   YAxis,
 } from 'recharts';
 
-type TabKey = 'overview' | 'regional' | 'providers' | 'vendors' | 'governance' | 'audit';
+type TabKey = 'overview' | 'providers' | 'vendors' | 'governance' | 'audit';
 
 type Provenance = {
   source: string;
@@ -90,7 +90,6 @@ type GovernanceRisk = {
 
 const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'overview', label: 'Overview', icon: <BookOpen size={16} /> },
-  { key: 'regional', label: 'ROOTS Hub Regional Disparities', icon: <Map size={16} /> },
   { key: 'providers', label: 'Provider Readiness Detail', icon: <Users size={16} /> },
   { key: 'vendors', label: 'Vendor Evaluations', icon: <Building2 size={16} /> },
   { key: 'governance', label: 'AI Governance Risks', icon: <ShieldAlert size={16} /> },
@@ -555,6 +554,9 @@ function App() {
   const renderOverview = () => {
     const overview = dashboardData.overview;
     const budgetData = safeArray(overview.budgetAllocation);
+    const regional = dashboardData.regionalDisparities;
+    const regions = safeArray(regional.regions);
+    const rhifPriority = safeArray(regional.rhifPriority);
 
     return (
       <div style={{ display: 'grid', gap: '18px' }}>
@@ -639,19 +641,13 @@ function App() {
             {provenanceBadge(overview.provenance)}
           </div>
         </div>
-      </div>
-    );
-  };
 
-  const renderRegional = () => {
-    const regional = dashboardData.regionalDisparities;
-    const regions = safeArray(regional.regions);
-    const rhifPriority = safeArray(regional.rhifPriority);
-
-    return (
-      <div style={{ display: 'grid', gap: '16px' }}>
         <div style={{ ...cardStyle, display: 'grid', gap: '8px' }}>
-          <h2 style={{ margin: 0, fontSize: '22px' }}>{regional.chartTitle}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Map size={18} color={palette.cyan} />
+            <h2 style={{ margin: 0, fontSize: '22px' }}>Overview Appendix: ROOTS Hub Regional Disparities</h2>
+          </div>
+          <div style={{ fontWeight: 600 }}>{regional.chartTitle}</div>
           <div style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.6 }}>{regional.chartSubtitle}</div>
           {provenanceBadge(regional.provenance)}
         </div>
@@ -1068,8 +1064,6 @@ function App() {
     switch (activeTab) {
       case 'overview':
         return renderOverview();
-      case 'regional':
-        return renderRegional();
       case 'providers':
         return renderProviders();
       case 'vendors':
