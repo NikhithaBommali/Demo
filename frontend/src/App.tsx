@@ -645,7 +645,7 @@ function App() {
         <div style={{ ...cardStyle, display: 'grid', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Map size={18} color={palette.cyan} />
-            <h2 style={{ margin: 0, fontSize: '22px' }}>Overview Appendix: ROOTS Hub Regional Disparities</h2>
+            <h2 style={{ margin: 0, fontSize: '22px' }}>Overview: ROOTS Hub Regional Disparities</h2>
           </div>
           <div style={{ fontWeight: 600 }}>{regional.chartTitle}</div>
           <div style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.6 }}>{regional.chartSubtitle}</div>
