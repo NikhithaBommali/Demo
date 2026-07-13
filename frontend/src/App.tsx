@@ -31,62 +31,22 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
-
-type TabKey = 'overview' | 'providers' | 'vendors' | 'governance' | 'audit';
-
-type Provenance = {
-  source: string;
-  owner: string;
-  lastUpdated: string;
-  confidence: string;
-  notes?: string;
-};
-
-type Provider = {
-  id: string;
-  name: string;
-  region: string;
-  type: string;
-  readinessScore: number;
-  populationServed: number;
-  connectivity: 'High' | 'Moderate' | 'Constrained';
-  workforceGap: 'Low' | 'Moderate' | 'High';
-  ehrMaturity: number;
-  referralDigitization: number;
-  aiPolicyStatus?: string;
-  blockers?: string[];
-  opportunities?: string[];
-  provenance: Provenance;
-};
-
-type Vendor = {
-  name: string;
-  category: string;
-  fitScore: number;
-  totalCost: string;
-  interoperability: number;
-  ruralFit: number;
-  implementationRisk: 'Low' | 'Moderate' | 'High';
-  strengths?: string[];
-  gaps?: string[];
-  provenance: Provenance;
-};
-
-type GovernanceRisk = {
-  id: string;
-  domain: string;
-  severity: 'Critical' | 'High' | 'Moderate';
-  description: string;
-  mitigation: string;
-  owner: string;
-  timeline: string;
-  provenance: Provenance;
-};
+import {
+  BulletList,
+  ChartFrame,
+  EmptyState as EmptyStateBase,
+  PillGroup,
+  ProvenanceBadge,
+  SectionHeading,
+} from './dashboard/components';
+import { chartColors, chartGridStroke, palette, surfaces } from './dashboard/theme';
+import { createCardStyle, rootStyle, shellStyle } from './dashboard/styles';
+import { formatPopulation, safeArray, safeText, severityColor } from './dashboard/utils';
+import type { GovernanceRisk, Provenance, Provider, TabKey, Vendor } from './dashboard/types';
 
 const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'overview', label: 'Overview', icon: <BookOpen size={16} /> },
@@ -95,16 +55,6 @@ const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: 'governance', label: 'AI Governance Risks', icon: <ShieldAlert size={16} /> },
   { key: 'audit', label: 'Audit/Provenance', icon: <Database size={16} /> },
 ];
-
-const palette = {
-  teal: '#1CC9A8',
-  cyan: '#06B6D4',
-  navy: '#12344D',
-  amber: '#F59E0B',
-  coral: '#F97316',
-  red: '#DC2626',
-  slate: '#64748B',
-};
 
 const dashboardData = {
   overview: {
@@ -447,16 +397,6 @@ const dashboardData = {
   },
 };
 
-const safeArray = <T,>(value: T[] | undefined): T[] => (Array.isArray(value) ? value : []);
-const safeText = (value: string | undefined, fallback = 'Unavailable in static dataset') => value?.trim() || fallback;
-const formatPopulation = (value: number | undefined) => `${Number(value ?? 0).toLocaleString()} served`;
-
-const severityColor = (severity: GovernanceRisk['severity']) => {
-  if (severity === 'Critical') return palette.red;
-  if (severity === 'High') return palette.coral;
-  return palette.amber;
-};
-
 function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
   const [selectedProviderId, setSelectedProviderId] = useState<string>(dashboardData.providers[0]?.id ?? '');
@@ -488,67 +428,14 @@ function App() {
     [],
   );
 
-  const rootStyle: React.CSSProperties = {
-    minHeight: '100vh',
-    color: 'hsl(var(--foreground))',
-    padding: '24px',
-  };
-
-  const shellStyle: React.CSSProperties = {
-    maxWidth: '1480px',
-    margin: '0 auto',
-    display: 'grid',
-    gap: '20px',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    background: 'color-mix(in srgb, hsl(var(--card)) 88%, transparent)',
-    border: '1px solid hsl(var(--border))',
-    borderRadius: '20px',
-    boxShadow: theme === 'dark' ? '0 16px 38px rgba(2, 6, 23, 0.34)' : '0 16px 40px rgba(15, 23, 42, 0.08)',
-    padding: '18px',
-    backdropFilter: 'blur(12px)',
-  };
+  const cardStyle = createCardStyle(theme);
 
   const provenanceBadge = (provenance: Provenance) => (
-    <div
-      style={{
-        marginTop: '12px',
-        padding: '10px 12px',
-        borderRadius: '14px',
-        border: '1px dashed hsl(var(--border))',
-        background: theme === 'dark' ? 'rgba(15, 23, 42, 0.45)' : 'rgba(248, 250, 252, 0.9)',
-        fontSize: '12px',
-        lineHeight: 1.5,
-      }}
-    >
-      <strong style={{ display: 'block', marginBottom: '4px' }}>Provenance</strong>
-      <span>{safeText(provenance.source)}</span>
-      <span style={{ display: 'block' }}>Owner: {safeText(provenance.owner)}</span>
-      <span style={{ display: 'block' }}>Last updated: {safeText(provenance.lastUpdated)}</span>
-      <span style={{ display: 'block' }}>Confidence: {safeText(provenance.confidence)}</span>
-      {provenance.notes ? <span style={{ display: 'block' }}>Notes: {provenance.notes}</span> : null}
-    </div>
+    <ProvenanceBadge provenance={provenance} theme={theme} />
   );
 
   const EmptyState = ({ title, detail }: { title: string; detail: string }) => (
-    <div
-      style={{
-        ...cardStyle,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '160px',
-        textAlign: 'center',
-        color: 'hsl(var(--muted-foreground))',
-      }}
-    >
-      <div>
-        <AlertTriangle size={22} style={{ margin: '0 auto 10px', color: palette.amber }} />
-        <div style={{ fontWeight: 700, color: 'hsl(var(--foreground))' }}>{title}</div>
-        <div style={{ marginTop: '4px', maxWidth: '480px' }}>{detail}</div>
-      </div>
-    </div>
+    <EmptyStateBase title={title} detail={detail} cardStyle={cardStyle} />
   );
 
   const renderOverview = () => {
@@ -564,10 +451,7 @@ function App() {
           style={{
             ...cardStyle,
             padding: '24px',
-            background:
-              theme === 'dark'
-                ? 'linear-gradient(135deg, rgba(28, 201, 168, 0.22), rgba(6, 182, 212, 0.14) 42%, rgba(15, 23, 42, 0.72) 100%)'
-                : 'linear-gradient(135deg, rgba(28, 201, 168, 0.18), rgba(6, 182, 212, 0.10) 42%, rgba(255, 255, 255, 0.95) 100%)',
+            background: surfaces.heroGradient(theme),
           }}
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'space-between' }}>
@@ -603,13 +487,14 @@ function App() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.3fr) minmax(320px, 0.9fr)', gap: '16px' }}>
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <Scale size={18} color={palette.teal} />
-              <h2 style={{ margin: 0, fontSize: '18px' }}>Executive assessment summary</h2>
-            </div>
+            <SectionHeading
+              headingLevel="h2"
+              icon={<Scale size={18} color={palette.teal} />}
+              title="Executive assessment summary"
+            />
             <div style={{ display: 'grid', gap: '12px' }}>
               {safeArray(overview.callouts).map((callout, index) => (
-                <div key={index} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px', borderRadius: '14px', background: theme === 'dark' ? 'rgba(30, 41, 59, 0.55)' : 'rgba(241, 245, 249, 0.92)' }}>
+                <div key={index} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px', borderRadius: '14px', background: surfaces.callout(theme) }}>
                   <ChevronRight size={18} color={palette.cyan} style={{ marginTop: '2px', flexShrink: 0 }} />
                   <div style={{ lineHeight: 1.7 }}>{callout}</div>
                 </div>
@@ -617,24 +502,24 @@ function App() {
             </div>
           </div>
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <DollarSign size={18} color={palette.amber} />
-              <h2 style={{ margin: 0, fontSize: '18px' }}>Initiative 6 budget posture</h2>
-            </div>
+            <SectionHeading
+              headingLevel="h2"
+              icon={<DollarSign size={18} color={palette.amber} />}
+              title="Initiative 6 budget posture"
+              marginBottom={10}
+            />
             {budgetData.length ? (
-              <div style={{ width: '100%', height: '320px' }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie data={budgetData} dataKey="amount" nameKey="name" outerRadius={96} innerRadius={50} paddingAngle={3}>
-                      {budgetData.map((entry, index) => (
-                        <Cell key={entry.name} fill={[palette.teal, palette.cyan, palette.amber, palette.coral, palette.navy, palette.slate][index % 6]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => [`$${Number(value).toFixed(1)}M`, 'Budget']} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartFrame height={320}>
+                <PieChart>
+                  <Pie data={budgetData} dataKey="amount" nameKey="name" outerRadius={96} innerRadius={50} paddingAngle={3}>
+                    {budgetData.map((entry, index) => (
+                      <Cell key={entry.name} fill={chartColors[index % chartColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [`$${Number(value).toFixed(1)}M`, 'Budget']} />
+                  <Legend />
+                </PieChart>
+              </ChartFrame>
             ) : (
               <EmptyState title="Budget allocation unavailable" detail="The static Phase 0 prototype does not currently include Initiative 6 allocation slices." />
             )}
@@ -643,10 +528,13 @@ function App() {
         </div>
 
         <div style={{ ...cardStyle, display: 'grid', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Map size={18} color={palette.cyan} />
-            <h2 style={{ margin: 0, fontSize: '22px' }}>Overview: ROOTS Hub Regional Disparities</h2>
-          </div>
+          <SectionHeading
+            headingLevel="h2"
+            icon={<Map size={18} color={palette.cyan} />}
+            title="Overview: ROOTS Hub Regional Disparities"
+            fontSize={22}
+            marginBottom={0}
+          />
           <div style={{ fontWeight: 600 }}>{regional.chartTitle}</div>
           <div style={{ color: 'hsl(var(--muted-foreground))', lineHeight: 1.6 }}>{regional.chartSubtitle}</div>
           {provenanceBadge(regional.provenance)}
@@ -656,20 +544,18 @@ function App() {
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '12px' }}>Regional readiness comparison</div>
             {regions.length ? (
-              <div style={{ width: '100%', height: '380px' }}>
-                <ResponsiveContainer>
-                  <BarChart data={regions} margin={{ top: 10, right: 12, left: 0, bottom: 44 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
-                    <XAxis dataKey="region" angle={-18} textAnchor="end" interval={0} height={70} stroke={palette.slate} />
-                    <YAxis stroke={palette.slate} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="readiness" fill={palette.teal} radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="workforce" fill={palette.cyan} radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="infrastructure" fill={palette.navy} radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartFrame height={380}>
+                <BarChart data={regions} margin={{ top: 10, right: 12, left: 0, bottom: 44 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                  <XAxis dataKey="region" angle={-18} textAnchor="end" interval={0} height={70} stroke={palette.slate} />
+                  <YAxis stroke={palette.slate} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="readiness" fill={palette.teal} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="workforce" fill={palette.cyan} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="infrastructure" fill={palette.navy} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartFrame>
             ) : (
               <EmptyState title="Regional disparity data missing" detail="Add static regional readiness records to display the ROOTS Hub comparison chart." />
             )}
@@ -678,19 +564,17 @@ function App() {
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '12px' }}>RHIF decision-support lens</div>
             {rhifPriority.length ? (
-              <div style={{ width: '100%', height: '380px' }}>
-                <ResponsiveContainer>
-                  <RadarChart data={rhifPriority} outerRadius={110}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="region" tick={{ fill: palette.slate, fontSize: 11 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: palette.slate, fontSize: 10 }} />
-                    <Radar name="Disparity Index" dataKey="disparityIndex" stroke={palette.coral} fill={palette.coral} fillOpacity={0.25} />
-                    <Radar name="Absorbency" dataKey="absorbency" stroke={palette.teal} fill={palette.teal} fillOpacity={0.18} />
-                    <Legend />
-                    <Tooltip />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartFrame height={380}>
+                <RadarChart data={rhifPriority} outerRadius={110}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="region" tick={{ fill: palette.slate, fontSize: 11 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: palette.slate, fontSize: 10 }} />
+                  <Radar name="Disparity Index" dataKey="disparityIndex" stroke={palette.coral} fill={palette.coral} fillOpacity={0.25} />
+                  <Radar name="Absorbency" dataKey="absorbency" stroke={palette.teal} fill={palette.teal} fillOpacity={0.18} />
+                  <Legend />
+                  <Tooltip />
+                </RadarChart>
+              </ChartFrame>
             ) : (
               <EmptyState title="RHIF prioritization view unavailable" detail="No static disparity-versus-absorbency records were found for this prototype." />
             )}
@@ -735,13 +619,7 @@ function App() {
                     textAlign: 'left',
                     borderRadius: '16px',
                     border: selected ? `1px solid ${palette.teal}` : '1px solid hsl(var(--border))',
-                    background: selected
-                      ? theme === 'dark'
-                        ? 'rgba(28, 201, 168, 0.18)'
-                        : 'rgba(28, 201, 168, 0.12)'
-                      : theme === 'dark'
-                        ? 'rgba(15, 23, 42, 0.55)'
-                        : 'rgba(255, 255, 255, 0.78)',
+                    background: selected ? surfaces.providerActive(theme) : surfaces.providerIdle(theme),
                     color: 'inherit',
                     padding: '14px',
                     cursor: 'pointer',
@@ -773,17 +651,14 @@ function App() {
                       {selectedProvider.type} · {selectedProvider.region} · {formatPopulation(selectedProvider.populationServed)}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                    {[
+                  <PillGroup
+                    theme={theme}
+                    pills={[
                       `Connectivity: ${selectedProvider.connectivity}`,
                       `Workforce gap: ${selectedProvider.workforceGap}`,
                       `AI policy: ${safeText(selectedProvider.aiPolicyStatus)}`,
-                    ].map((pill) => (
-                      <div key={pill} style={{ padding: '8px 12px', borderRadius: '999px', background: theme === 'dark' ? 'rgba(30,41,59,0.7)' : 'rgba(241,245,249,0.95)', border: '1px solid hsl(var(--border))', fontSize: '13px' }}>
-                        {pill}
-                      </div>
-                    ))}
-                  </div>
+                    ]}
+                  />
                 </div>
                 {provenanceBadge(selectedProvider.provenance)}
               </div>
@@ -791,68 +666,58 @@ function App() {
               <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(320px, 0.8fr)', gap: '16px' }}>
                 <div style={cardStyle}>
                   <div style={{ fontWeight: 700, marginBottom: '10px' }}>Selected provider detail</div>
-                  <div style={{ width: '100%', height: '300px' }}>
-                    <ResponsiveContainer>
-                      <BarChart data={detailMetrics} layout="vertical" margin={{ left: 20, right: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
-                        <XAxis type="number" domain={[0, 100]} stroke={palette.slate} />
-                        <YAxis type="category" dataKey="label" stroke={palette.slate} width={110} />
-                        <Tooltip />
-                        <Bar dataKey="value" fill={palette.teal} radius={[0, 6, 6, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <ChartFrame height={300}>
+                    <BarChart data={detailMetrics} layout="vertical" margin={{ left: 20, right: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                      <XAxis type="number" domain={[0, 100]} stroke={palette.slate} />
+                      <YAxis type="category" dataKey="label" stroke={palette.slate} width={110} />
+                      <Tooltip />
+                      <Bar dataKey="value" fill={palette.teal} radius={[0, 6, 6, 0]} />
+                    </BarChart>
+                  </ChartFrame>
                 </div>
 
                 <div style={cardStyle}>
                   <div style={{ fontWeight: 700, marginBottom: '10px' }}>Peer comparison snapshot</div>
-                  <div style={{ width: '100%', height: '300px' }}>
-                    <ResponsiveContainer>
-                      <LineChart data={providerComparison}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
-                        <XAxis dataKey="name" stroke={palette.slate} />
-                        <YAxis stroke={palette.slate} domain={[0, 100]} />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="readiness" stroke={palette.teal} strokeWidth={2.5} />
-                        <Line type="monotone" dataKey="ehr" stroke={palette.cyan} strokeWidth={2.5} />
-                        <Line type="monotone" dataKey="referral" stroke={palette.coral} strokeWidth={2.5} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <ChartFrame height={300}>
+                    <LineChart data={providerComparison}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                      <XAxis dataKey="name" stroke={palette.slate} />
+                      <YAxis stroke={palette.slate} domain={[0, 100]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="readiness" stroke={palette.teal} strokeWidth={2.5} />
+                      <Line type="monotone" dataKey="ehr" stroke={palette.cyan} strokeWidth={2.5} />
+                      <Line type="monotone" dataKey="referral" stroke={palette.coral} strokeWidth={2.5} />
+                    </LineChart>
+                  </ChartFrame>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={cardStyle}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <AlertTriangle size={18} color={palette.coral} />
-                    <div style={{ fontWeight: 700 }}>Primary blockers</div>
-                  </div>
-                  {safeArray(selectedProvider.blockers).length ? (
-                    <ul style={{ margin: 0, paddingLeft: '18px', lineHeight: 1.8 }}>
-                      {safeArray(selectedProvider.blockers).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div style={{ color: 'hsl(var(--muted-foreground))' }}>No blockers were documented in the current static profile.</div>
-                  )}
+                  <SectionHeading
+                    icon={<AlertTriangle size={18} color={palette.coral} />}
+                    title="Primary blockers"
+                    gap={8}
+                    marginBottom={10}
+                  />
+                  <BulletList
+                    items={selectedProvider.blockers}
+                    fallback="No blockers were documented in the current static profile."
+                  />
                 </div>
                 <div style={cardStyle}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <BadgeCheck size={18} color={palette.teal} />
-                    <div style={{ fontWeight: 700 }}>Phase 1 opportunities</div>
-                  </div>
-                  {safeArray(selectedProvider.opportunities).length ? (
-                    <ul style={{ margin: 0, paddingLeft: '18px', lineHeight: 1.8 }}>
-                      {safeArray(selectedProvider.opportunities).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div style={{ color: 'hsl(var(--muted-foreground))' }}>Opportunity recommendations are not available for this provider.</div>
-                  )}
+                  <SectionHeading
+                    icon={<BadgeCheck size={18} color={palette.teal} />}
+                    title="Phase 1 opportunities"
+                    gap={8}
+                    marginBottom={10}
+                  />
+                  <BulletList
+                    items={selectedProvider.opportunities}
+                    fallback="Opportunity recommendations are not available for this provider."
+                  />
                 </div>
               </div>
             </>
@@ -873,20 +738,18 @@ function App() {
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '12px' }}>Comparative vendor fit</div>
             {vendors.length ? (
-              <div style={{ width: '100%', height: '360px' }}>
-                <ResponsiveContainer>
-                  <BarChart data={vendors} margin={{ top: 10, right: 20, left: 0, bottom: 56 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.24)" />
-                    <XAxis dataKey="name" angle={-18} textAnchor="end" interval={0} height={76} stroke={palette.slate} />
-                    <YAxis domain={[0, 100]} stroke={palette.slate} />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="fitScore" fill={palette.teal} radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="ruralFit" fill={palette.cyan} radius={[6, 6, 0, 0]} />
-                    <Bar dataKey="interoperability" fill={palette.navy} radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartFrame height={360}>
+                <BarChart data={vendors} margin={{ top: 10, right: 20, left: 0, bottom: 56 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} />
+                  <XAxis dataKey="name" angle={-18} textAnchor="end" interval={0} height={76} stroke={palette.slate} />
+                  <YAxis domain={[0, 100]} stroke={palette.slate} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="fitScore" fill={palette.teal} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="ruralFit" fill={palette.cyan} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="interoperability" fill={palette.navy} radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartFrame>
             ) : (
               <EmptyState title="Vendor scorecards missing" detail="Add static vendor comparison records to render the evaluation chart." />
             )}
@@ -908,43 +771,24 @@ function App() {
                   <div style={{ fontSize: '20px', fontWeight: 700 }}>{vendor.name}</div>
                   <div style={{ marginTop: '4px', color: 'hsl(var(--muted-foreground))' }}>{vendor.category}</div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {[
+                <PillGroup
+                  theme={theme}
+                  pills={[
                     `Fit ${vendor.fitScore}`,
                     `Cost ${vendor.totalCost}`,
                     `Risk ${vendor.implementationRisk}`,
-                  ].map((pill) => (
-                    <div key={pill} style={{ padding: '8px 12px', borderRadius: '999px', border: '1px solid hsl(var(--border))', background: theme === 'dark' ? 'rgba(30,41,59,0.64)' : 'rgba(248,250,252,0.96)', fontSize: '13px' }}>
-                      {pill}
-                    </div>
-                  ))}
-                </div>
+                  ]}
+                />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '14px' }}>
                 <div>
                   <div style={{ fontWeight: 700, marginBottom: '8px' }}>Strengths</div>
-                  {safeArray(vendor.strengths).length ? (
-                    <ul style={{ margin: 0, paddingLeft: '18px', lineHeight: 1.8 }}>
-                      {safeArray(vendor.strengths).map((strength) => (
-                        <li key={strength}>{strength}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div style={{ color: 'hsl(var(--muted-foreground))' }}>Strength detail unavailable.</div>
-                  )}
+                  <BulletList items={vendor.strengths} fallback="Strength detail unavailable." />
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, marginBottom: '8px' }}>Gaps / cautions</div>
-                  {safeArray(vendor.gaps).length ? (
-                    <ul style={{ margin: 0, paddingLeft: '18px', lineHeight: 1.8 }}>
-                      {safeArray(vendor.gaps).map((gap) => (
-                        <li key={gap}>{gap}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div style={{ color: 'hsl(var(--muted-foreground))' }}>Gap detail unavailable.</div>
-                  )}
+                  <BulletList items={vendor.gaps} fallback="Gap detail unavailable." />
                 </div>
               </div>
               {provenanceBadge(vendor.provenance)}
@@ -1011,14 +855,11 @@ function App() {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, 0.9fr)', gap: '16px' }}>
         <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <FileCheck2 size={18} color={palette.teal} />
-            <div style={{ fontWeight: 700 }}>Traceability manifest</div>
-          </div>
+          <SectionHeading icon={<FileCheck2 size={18} color={palette.teal} />} title="Traceability manifest" />
           {entries.length ? (
             <div style={{ display: 'grid', gap: '12px' }}>
               {entries.map((entry) => (
-                <div key={entry.traceId} style={{ border: '1px solid hsl(var(--border))', borderRadius: '16px', padding: '14px', background: theme === 'dark' ? 'rgba(15,23,42,0.48)' : 'rgba(248,250,252,0.92)' }}>
+                <div key={entry.traceId} style={{ border: '1px solid hsl(var(--border))', borderRadius: '16px', padding: '14px', background: surfaces.auditEntry(theme) }}>
                   <div style={{ fontWeight: 700 }}>{entry.artifact}</div>
                   <div style={{ marginTop: '8px', lineHeight: 1.7, color: 'hsl(var(--muted-foreground))' }}>
                     <div>Dataset: {entry.dataset}</div>
@@ -1037,13 +878,10 @@ function App() {
 
         <div style={{ display: 'grid', gap: '16px' }}>
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <Database size={18} color={palette.cyan} />
-              <div style={{ fontWeight: 700 }}>Prototype guardrails</div>
-            </div>
+            <SectionHeading icon={<Database size={18} color={palette.cyan} />} title="Prototype guardrails" marginBottom={10} />
             <div style={{ display: 'grid', gap: '10px' }}>
               {safeArray(audit.disclaimers).map((item) => (
-                <div key={item} style={{ padding: '12px', borderRadius: '14px', border: '1px solid hsl(var(--border))', background: theme === 'dark' ? 'rgba(30,41,59,0.62)' : 'rgba(255,255,255,0.82)' }}>
+                <div key={item} style={{ padding: '12px', borderRadius: '14px', border: '1px solid hsl(var(--border))', background: surfaces.disclaimer(theme) }}>
                   {item}
                 </div>
               ))}
@@ -1100,7 +938,7 @@ function App() {
                 borderRadius: '999px',
                 padding: '10px 14px',
                 cursor: 'pointer',
-                background: theme === 'dark' ? 'rgba(30, 41, 59, 0.86)' : 'rgba(255,255,255,0.88)',
+                background: surfaces.toggle(theme),
                 color: 'inherit',
               }}
             >
@@ -1126,11 +964,7 @@ function App() {
                     gap: '8px',
                     borderRadius: '999px',
                     border: selected ? `1px solid ${palette.teal}` : '1px solid hsl(var(--border))',
-                    background: selected
-                      ? theme === 'dark'
-                        ? 'linear-gradient(135deg, rgba(28, 201, 168, 0.18), rgba(6, 182, 212, 0.16))'
-                        : 'linear-gradient(135deg, rgba(28, 201, 168, 0.14), rgba(6, 182, 212, 0.10))'
-                      : 'transparent',
+                    background: selected ? surfaces.navActive(theme) : 'transparent',
                     color: selected ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
                     padding: '10px 14px',
                     fontWeight: selected ? 700 : 600,
